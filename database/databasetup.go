@@ -6,11 +6,11 @@ import (
 	"log"
 	"time"
 
-	"go.mongodb.org/mongo-driver/v2/mongo"
-	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func DBSet() *mongo.Client{
+func DBSet() *mongo.Client {
 	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017"))
 	if err != nil {
 		log.Fatal(err)
@@ -21,7 +21,7 @@ func DBSet() *mongo.Client{
 	defer cancel()
 
 	client.Connect(ctx)
-	if err != nil{
+	if err != nil {
 		log.Fatal(err)
 	}
 
@@ -37,12 +37,12 @@ func DBSet() *mongo.Client{
 
 var Client *mongo.Client = DBSet()
 
-func UserData(client *mongo.Client, collectionName string) *mongo.Collection{
-    var collection *mongo.Collection = client.Database("Ecommerce").Collection(collectionName)
-    return collection
+func UserData(client *mongo.Client, collectionName string) *mongo.Collection {
+	var collection *mongo.Collection = client.Database("Ecommerce").Collection(collectionName)
+	return collection
 }
 
-func ProductData(client *mongo.Client, collectionName string) *mongo.Collection{
-    var productCollection *mongo.Collection = client.Database("Ecommerce").Collection(collectionName)
-    return productCollection
+func ProductData(client *mongo.Client, collectionName string) *mongo.Collection {
+	var productCollection *mongo.Collection = client.Database("Ecommerce").Collection(collectionName)
+	return productCollection
 }

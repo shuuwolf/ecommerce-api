@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type Application struct{
+type Application struct {
 	prodCollection *mongo.Collection
 	userCollection *mongo.Collection
 }
@@ -27,23 +27,23 @@ func NewApplication(prodCollection, userCollection *mongo.Collection) *Applicati
 	}
 }
 
-func (app *Application) AddToCart() gin.HandlerFunc{
-	return func(c *gin.Context){
+func (app *Application) AddToCart() gin.HandlerFunc {
+	return func(c *gin.Context) {
 		productQueryID := c.Query("id")
-		if productQueryID == ""{
+		if productQueryID == "" {
 			log.Println("product id is empty")
 			_ = c.AbortWithError(http.StatusBadRequest, errors.New("product id is empty"))
 			return
 		}
 
 		userQueryID := c.Query("userID")
-		if userQueryID == ""{
+		if userQueryID == "" {
 			_ = c.AbortWithError(http.StatusBadRequest, errors.New("user id is empty"))
 			return
 		}
 
 		productID, err := primitive.ObjectIDFromHex(productQueryID)
-		if err != nil{
+		if err != nil {
 			log.Println(err)
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
@@ -54,30 +54,30 @@ func (app *Application) AddToCart() gin.HandlerFunc{
 
 		err = database.AddProductToCart(ctx, app.prodCollection, app.userCollection, productID, userQueryID)
 		if err != nil {
-			c.IndentedJSON(http.StatusInternalServer, err)
+			c.IndentedJSON(http.StatusInternalServerError, err)
 		}
 
 		c.IndentedJSON(200, "Successfully added to the cart")
 	}
 }
 
-func (app *Application) RemoveItem() gin.HandlerFunc{
-	return func(c *gin.Context){
+func (app *Application) RemoveItem() gin.HandlerFunc {
+	return func(c *gin.Context) {
 		productQueryID := c.Query("id")
-		if productQueryID == ""{
+		if productQueryID == "" {
 			log.Println("product id is empty")
 			_ = c.AbortWithError(http.StatusBadRequest, errors.New("product id is empty"))
 			return
 		}
 
 		userQueryID := c.Query("userID")
-		if userQueryID == ""{
+		if userQueryID == "" {
 			_ = c.AbortWithError(http.StatusBadRequest, errors.New("user id is empty"))
 			return
 		}
 
 		productID, err := primitive.ObjectIDFromHex(productQueryID)
-		if err != nil{
+		if err != nil {
 			log.Println(err)
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
@@ -95,10 +95,10 @@ func (app *Application) RemoveItem() gin.HandlerFunc{
 	}
 }
 
-func GetItemFromCart() gin.HandlerFunc{
-	return func(c *gin.Context){
+func GetItemFromCart() gin.HandlerFunc {
+	return func(c *gin.Context) {
 		user_id := c.Query("id")
-		if user_id == ""{
+		if user_id == "" {
 			c.Header("Content-Type", "application/json")
 			c.JSON(http.StatusNotFound, gin.H{"error": "invalid id"})
 			c.Abort()
@@ -110,28 +110,28 @@ func GetItemFromCart() gin.HandlerFunc{
 		defer cancel()
 
 		var filledCart models.User
-		err := UserCollection.FindOne(ctx, bson.D{primitive.E{Key:"_id", Value: usert_id}}).Decode(&filledCart)
+		err := UserCollection.FindOne(ctx, bson.D{primitive.E{Key: "_id", Value: usert_id}}).Decode(&filledCart)
 		if err != nil {
 			log.Panicln(err)
 			c.IndentedJSON(500, "not found")
 			return
 		}
 
-		filterMatch := bson.D{{Key:"$match", Value: bson.D{primitive.E{Key:"_id", Value: usert_id}}}}
-		unwind := bson.D{{Key:"$unwind", Value:bson.D{primitive.E{Key:"path", Value:"$usercart"}}}}
-		grouping := bson.D{{Key:"$group", Value:bson.D{primitive.E{Key:"_id", Value:"$_id"}, {Key:"total", Value:bson.D{primitive.E{Key:"$sum", Value:"$usercart.price"}}}}}}
+		filterMatch := bson.D{{Key: "$match", Value: bson.D{primitive.E{Key: "_id", Value: usert_id}}}}
+		unwind := bson.D{{Key: "$unwind", Value: bson.D{primitive.E{Key: "path", Value: "$usercart"}}}}
+		grouping := bson.D{{Key: "$group", Value: bson.D{primitive.E{Key: "_id", Value: "$_id"}, {Key: "total", Value: bson.D{primitive.E{Key: "$sum", Value: "$usercart.price"}}}}}}
 		pointCursor, err := UserCollection.Aggregate(ctx, mongo.Pipeline{filterMatch, unwind, grouping})
-		if err != nil{
+		if err != nil {
 			log.Println(err)
 		}
 
 		var listing []bson.M
-		if err = pointCursor.All(ctx, &listing); err != nil{
+		if err = pointCursor.All(ctx, &listing); err != nil {
 			log.Println(err)
 			c.AbortWithStatus(http.StatusInternalServerError)
 		}
 
-		for _, json := range listing{
+		for _, json := range listing {
 			c.IndentedJSON(200, json["total"])
 			c.IndentedJSON(200, filledCart.UserCart)
 		}
@@ -140,10 +140,10 @@ func GetItemFromCart() gin.HandlerFunc{
 	}
 }
 
-func (app *Application) BuyFromCart() gin.HandlerFunc{
-	return func(c *gin.Context){
+func (app *Application) BuyFromCart() gin.HandlerFunc {
+	return func(c *gin.Context) {
 		userQueryID := c.Query("id")
-		if userQueryID == ""{
+		if userQueryID == "" {
 			log.Panicln("user id is empty")
 			_ = c.AbortWithError(http.StatusBadRequest, errors.New("UserID is empty"))
 		}
@@ -152,31 +152,31 @@ func (app *Application) BuyFromCart() gin.HandlerFunc{
 		defer cancel()
 
 		err := database.BuyItemFromCart(ctx, app.userCollection, userQueryID)
-		if err != nil{
+		if err != nil {
 			c.IndentedJSON(http.StatusInternalServerError, err)
 		}
 
-		c.IndentedJSON("Successfully place the order")
+		c.IndentedJSON(200, "Successfully place the order")
 	}
 }
 
-func (app *Application) InstantBuy() gin.HandlerFunc{
-	return func(c *gin.Context){
+func (app *Application) InstantBuy() gin.HandlerFunc {
+	return func(c *gin.Context) {
 		productQueryID := c.Query("id")
-		if productQueryID == ""{
+		if productQueryID == "" {
 			log.Println("product id is empty")
 			_ = c.AbortWithError(http.StatusBadRequest, errors.New("product id is empty"))
 			return
 		}
 
 		userQueryID := c.Query("userID")
-		if userQueryID == ""{
+		if userQueryID == "" {
 			_ = c.AbortWithError(http.StatusBadRequest, errors.New("user id is empty"))
 			return
 		}
 
 		productID, err := primitive.ObjectIDFromHex(productQueryID)
-		if err != nil{
+		if err != nil {
 			log.Println(err)
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
